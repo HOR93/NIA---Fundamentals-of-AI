@@ -1,0 +1,270 @@
+#NIA - Trabalho Computacional 2 - Perceptrom multi camada.
+
+#Bibliotecas - Tensorflow e keras
+
+import tensorflow as tf
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay
+
+Processamento de Dados e visualização
+
+#aqui, nessa etapa inicial, eu utilizo o dataset MNIST que já vem integrado no keras, assim, não preciso baixar arquivos manualmente nem separar treino e teste
+i_mnist = tf.keras.datasets.mnist
+
+(X_train, y_train), (X_test, y_test) = i_mnist.load_data()
+
+# o propio keras ja retorna os dados separados em dados de treinamento e teste/validação
+
+#antes analisar os formatos
+
+X_train.shape, y_train.shape
+
+#as imagens do mnist, aqui eu utilizo o imshow do matplot para um exemplo da visualização.
+
+plt.imshow(X_train[0], cmap="gray")
+
+plt.title(f"Label: {y_train[0]}")
+plt.axis("off");
+
+# então normalizo os pixels entre 0 e 1 para melhorar o treinamento do modelo, senão os pixels grandes podem bagunçar o treinamento
+
+X_train = X_train / 255.0
+X_test = X_test / 255.0
+
+- Modelo 1: Usando Sigmoid e SGD com 1 camada escondida simples
+
+modelo_1 = tf.keras.Sequential([
+    tf.keras.layers.Flatten(input_shape=(28,28)),
+    tf.keras.layers.Dense(128, activation="sigmoid"),
+    tf.keras.layers.Dense(10, activation="softmax")
+])
+
+#inicio da rede neural com o sequential do keras, o flatten vai transformar a imagem 28x28 em um vetor unico, depois utilizo uma camada escondida com 128 neuronios usando sigmoid e no final, uso 10 neuronios, um para cada numero de 0 a 9
+
+#Compilando o modelo 1
+
+modelo_1.compile(
+    loss="sparse_categorical_crossentropy",
+    optimizer=tf.keras.optimizers.SGD(),
+    metrics=["accuracy"]
+)
+
+#inicio do treinamento com 10 epochs
+
+h1 = modelo_1.fit(
+    X_train,
+    y_train,
+    epochs=10,
+    validation_data=(X_test, y_test)
+)
+
+# avaliando o modelo para ver se os valores bateram
+
+perda_modelo_1, acuracia_modelo_1 = modelo_1.evaluate(X_test, y_test)
+
+perda_modelo_1, acuracia_modelo_1
+
+Resultado do modelo 1: utilizando sigmoid e SGD atingiu 91% de acuracia.
+
+Apesar de funcionar bem, o treinamento foi mais lento e o desempenho ficou abaixo dos outros modelos, o SGD dificulta a convergência.
+
+
+- Modelo 2: Agora utilizando o otimizador Adam
+
+modelo_2 = tf.keras.Sequential([
+    tf.keras.layers.Flatten(input_shape=(28,28)),
+    tf.keras.layers.Dense(128, activation="sigmoid"),
+    tf.keras.layers.Dense(10, activation="softmax")
+])
+
+#mesmo modelo anterior com 1 camada escondida usando sigmoid, mas agora trocando o SGD pelo Adam para melhorar o treinamento
+
+#Compilando o modelo 2
+
+modelo_2.compile(
+    loss="sparse_categorical_crossentropy",
+    optimizer="adam",
+    metrics=["accuracy"]
+)
+
+#treinamento
+
+h2 = modelo_2.fit(
+    X_train, y_train,
+    epochs=10,
+    validation_data=(X_test, y_test)
+)
+
+#avaliando o modelo 2 com ADAM
+
+perda_modelo_2, acuracia_modelo_2 = modelo_2.evaluate(X_test, y_test)
+
+perda_modelo_2, acuracia_modelo_2
+
+Resultado: utilizando Adam no lugar do SGD, o modelo melhora, chegando a aproximadamente 97% de acuracia.
+
+O Adam adapta automaticamente a taxa de aprendizado durante o treinamento, permitindo uma convergência mais rápida e eficiente.
+
+
+
+- Modelo 3: Agora, tirando a ativação sigmoid e usando Relu
+
+modelo_3 = tf.keras.Sequential([
+    tf.keras.layers.Flatten(input_shape=(28,28)),
+
+    tf.keras.layers.Dense(128, activation="relu"),
+
+    tf.keras.layers.Dense(10, activation="softmax")
+])
+
+#mesmo modelo com 1 camada escondida e usando relu, pra melhorar o treinamento da rede e evita saturação
+
+#configurando com os mesmo otimizadores e funções de perda, metrica continua sendo accuracy
+
+modelo_3.compile(
+    loss="sparse_categorical_crossentropy",
+    optimizer="adam",
+    metrics=["accuracy"]
+)
+
+#treinamento
+
+h3 = modelo_3.fit(
+    X_train, y_train,
+    epochs=10,
+    validation_data=(X_test, y_test)
+)
+
+#avaliando o modelo 3
+
+perda_modelo_3, acuracia_modelo_3  = modelo_3.evaluate(X_test, y_test)
+
+perda_modelo_3, acuracia_modelo_3
+
+resultado: depois da troca da função sigmoid pela relu, houve uma pequena melhora no desempenho do modelo.
+
+A função relu evita problemas de saturação da sigmoid e facilita o fluxo do gradiente durante o treinamento, melhorando o resultado
+
+
+
+- Modelo 4: Agora quaseo o mesmo modelo, mas aumentando as camadas
+
+modelo_4 = tf.keras.Sequential([
+    tf.keras.layers.Flatten(input_shape=(28,28)),
+
+    tf.keras.layers.Dense(256, activation="relu"),
+
+    tf.keras.layers.Dense(128, activation="relu"),
+
+    tf.keras.layers.Dense(10, activation="softmax")
+])
+
+#agora no modelo 4, uma rede maior com duas camadas escondidas, aumentando a quantidade de neuronios para melhorar o aprendizado do modelo.
+
+#compilando
+
+modelo_4.compile(
+    loss="sparse_categorical_crossentropy",
+    optimizer="adam",
+    metrics=["accuracy"]
+)
+
+#treinamento
+
+h4 = modelo_4.fit(
+    X_train,
+    y_train,
+    epochs=10,
+    validation_data=(X_test, y_test)
+)
+
+#avaliando o modelo 4
+
+perda_modelo_4, acuracia_modelo_4  = modelo_4.evaluate(X_test, y_test)
+
+perda_modelo_4, acuracia_modelo_4
+
+Resultado: O modelo com duas camadas escondidas apresentou o melhor desempenho, conseguindo  98% de acuracia.
+
+Com mais neurônios e camadas, a rede consegue aprender padrões das imagens, melhorando a capacidade de classificação.
+
+
+
+# Comparação dos modelos
+
+# comparando os modelos
+
+resultados = pd.DataFrame({
+    "Modelo": [
+        "sigmoid + sgd",
+        "sigmoid + adam",
+        "reLU + adam",
+        "rede mair com duas camadas"
+    ],
+
+    "Accuracy": [
+        acuracia_modelo_1,
+        acuracia_modelo_2,
+        acuracia_modelo_3,
+        acuracia_modelo_4 
+    ]
+})
+
+resultados
+
+# visualizando os erros do modelo 4, que teve o melhor desempenho
+
+# aqui faço previsões usando o melhor modelo
+
+y_probs = modelo_4.predict(X_test)
+
+y_preds = y_probs.argmax(axis=1)
+
+# aqui visualizo algumas imagens classificadas incorretamente
+
+errado = np.where(y_preds != y_test)[0]
+
+plt.figure(figsize=(10,10))
+
+for i, index in enumerate(errado[:9]):
+
+    plt.subplot(3,3,i+1)
+
+    plt.imshow(X_test[index], cmap="gray")
+
+    plt.title(f"real: {y_test[index]} | previsto: {y_preds[index]}")
+
+    plt.axis("off")
+
+Resultado: Mesmo com alta acuracia, ainda existem alguns erros, observando as imagens, é possível perceber que muitos números foram escritos de maneira incompleta, dificultando até mesmo a interpretação, por exemplo, alguns dígitos 2 parecem 7, alguns 8 parecem 0, e alguns 6 podem ser confundidos com 0 dependendo da escrita.
+
+#Matriz de confusão
+
+
+matriz = confusion_matrix(y_test, y_preds)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=matriz)
+
+fig, ax = plt.subplots(figsize=(10,10))
+
+disp.plot(ax=ax);
+
+Resultado:
+a matriz de confusão mostra que a maioria das classificações foi correta, os maiores valores estão concentrados na diagonal, isso indica que o modelo conseguiu aprender bem os padrões dos números escritos a mão.
+
+
+
+#Conclusão geral:
+
+Foi possível implementar diferentes versões de um Perceptron Multicamadas para o problema MNIST.
+
+Os resultados mostraram que mudanças simples na arquitetura e no treinamento impactam o desempenho da rede neural.
+
+O uso do otimizador Adam trouxe uma melhora em relação ao SGD, enquanto a função ReLU apresentou desempenho superior à sigmoid, redes maiores apresentaram melhor capacidade de aprendizado, atingindo aproximadamente 98% de acurácia no conjunto de teste.
+
+Portanto, a análise visual dos erros e da matriz de confusão mostrou que os erros restantes geralmente ocorrem em dígitos visualmente semelhantes ou escritos de maneira estranha.
+
