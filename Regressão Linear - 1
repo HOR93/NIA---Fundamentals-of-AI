@@ -1,0 +1,154 @@
+#Noções de IA - Trabalho 1 - Regressão Linear - Wine
+
+* utilizei o sklearn por ter mais familiaridade e por oferecer ferramentas mais diretas, utilizei um pouco de pandas para demonstrar um pouco do dataset.
+
+
+#Bibliotecas
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer #preencher os dados que falta
+from sklearn.preprocessing import OneHotEncoder #transformar strings em numeros
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_absolute_error #MAE como função de perda
+
+#modelo
+from sklearn.linear_model import LinearRegression as LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+# Pre-Processamento
+
+* aqui foi feito toda a manipulação dos dados, tratamento com relação aos valores NaN e transformo variáveis categoricas em numericas utilizando pipeline e columnTransformer
+
+vinho = pd.read_csv('winequalityN.csv')
+vinho.head()
+
+vinho.tail()
+
+vinho["quality"].hist()
+
+media_por_tipo = vinho.groupby("type")["quality"].mean()
+
+media_por_tipo.plot(kind="bar")
+plt.xlabel("white/red")
+plt.ylabel("qualidade media")
+plt.title("Qualidade media por tipo de vinho")
+
+# aqui eu vejo se os tipos são numericos ou não. caso contrario, vou precisar fazer algumas mudanças.
+vinho.dtypes
+
+# aqui eu vejo se tem NaN nos dados, veja que tem varios faltando.
+vinho.isna().sum()
+
+#aqui eu separo as colunas para resolver o problema dos valores NaN, tem dois tipos, type e quality
+categorical_features = ["type"]
+numeric_features = vinho.drop(["type", "quality"], axis=1).columns
+
+#aqui utilizo os transformers para preencher os valores NaN e transformar o tipo object em numerico
+
+# tipo categorico
+categorical_transformer = Pipeline(steps=[
+    ("imputer",SimpleImputer(strategy="constant", fill_value="missing")),
+    ("onehot", OneHotEncoder(handle_unknown="ignore"))
+])
+
+# tipo numerico
+numeric_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="mean")),
+    ("scaler", StandardScaler())
+])
+
+#nessa parte eu uso o ColumnTransformer para aplicar as transformações: nas categoricas ( type ) uso o pipeline categorico e nas numericas o pipeline numerico, cat de categorico e num de numerico.
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("cat", categorical_transformer, categorical_features),
+        ("num", numeric_transformer, numeric_features)
+    ])
+
+#criando o preprocesso e modelando a pipeline
+model = Pipeline(steps=[("preprocessor", preprocessor),
+                        ("model", LinearRegression())])
+
+## Treinamento do modelo
+
+* Aqui eu faço a separação do dataset para o treinamento, separando as labels X e features y, para então o modelo de regressão ser treinado utilizando os dados de treinamento.
+
+# aqui acontece a separação de dados: eu separo as 'features' (X) das 'labels' (y), pra permitir que o modelo aprenda a relação entre os atributos e o alvo.
+X = vinho.drop("quality", axis=1)
+y = vinho["quality"]
+
+#determinando os dados de treino e teste
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+#treinando o modelo
+
+model.fit(X_train, y_train)
+
+## Avaliação do modelo
+
+* Aqui utilizo as metricas para avaliação do modelo e função de perda.
+
+# nessa celula é feita a previsão das notas de qualidade para os dados de teste
+y_pred = model.predict(X_test)
+# com o model.score da pra ver o quanto da variaçao dos dados o modelo consegue explicar
+model.score(X_test, y_test)
+
+#o modelo só consegue explicar 34% da variação na qualidade do vinho
+
+# y_pred mostra os valores previstos pelo modelo em formato decimal
+y_pred
+
+#função de perda para ver o valor que o modelo previu com o valor real
+mae = mean_absolute_error(y_test, y_pred)
+mae
+
+# calculo a media das notas no conjunto de treino
+y_mean = y_train.mean()
+# faço um vetor com essa media para todos os exemplos do teste
+y_trivial = np.full_like(y_test, y_mean)
+# finalizo com o erro absoluto medio do preditor trivial
+mae_trivial = mean_absolute_error(y_test, y_trivial)
+
+mae, mae_trivial
+
+#o modelo teve MAE de 0.54, menor que o preditor que teve 0.90, mostrando que o modelo aprende melhor do que simplesmente usar a média
+
+# aqui eu arredondo os valores previstos, seguindo o roteiro do trabalho que mostra: a qualidade do vinho é um número inteiro (1 a 7)
+y_pred_round = np.round(y_pred)
+
+y_pred_round
+
+# aqui eu comparo os valores reais com os valores arredondados
+acc = accuracy_score(y_test, y_pred_round)
+
+acc
+
+# aqui eu uso a média arredondada como preditor trivial
+y_trivial_round = np.round(y_trivial)
+
+acc_trivial = accuracy_score(y_test, y_trivial_round)
+
+acc, acc_trivial
+
+#o modelo teve acurácia 54%, maior que o trivial 32%, mostrando melhor desempenho na classificação depois do arredondamento
+
+# aqui eu calculo a correlação entre valores reais e previstos
+corr = np.corrcoef(y_test, y_pred)[0, 1]
+
+corr
+
+#correlação 0.58, indicando relação moderada entre valores reais e previstos
+
+# **Conclusão:**
+
+o modelo teve um desempenho razoavel, com MAE de 0.54,
+sendo melhor que o preditor trivial que teve 0.90, na parte de classificação, o modelo teve acurácia de 54%, maior que o trivial 32% e bem acima de um modelo aleatório 14%, a correlação deu 0.58, mostrando que o modelo consegue capturar parte da relação dos dados, mas não totalmente.
+
+Já o model.score = 0.34, mostra que o modelo ainda não explica bem
+toda a variação da qualidade dos vinhos
+isso acontece porque o problema é não-linear, e a regressão linear tem suas limitações, mas mesmo assim o modelo foi melhor do que simplesmente usar a média como previsão.
